@@ -32,6 +32,9 @@ export const SearchBtn = styled.button`
   border: none;
   outline: none;
   background-color: transparent;
+  &:hover {
+    fill: #212121;
+  }
 `;
 export const SearchInput = styled.input`
   width: 250px;

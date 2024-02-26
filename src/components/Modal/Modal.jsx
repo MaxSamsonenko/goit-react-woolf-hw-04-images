@@ -1,36 +1,32 @@
+import React, { useEffect } from 'react';
 import { Overlay, ModalWin } from './Modal.styled';
 
-import React, { Component } from 'react';
+export const Modal = ({ isVisible, imageUrl, alt, onClose }) => {
+  useEffect(() => {
+    const handleKeyDown = e => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
 
-export class Modal extends Component {
-  componentDidMount() {
-    document.addEventListener('keydown', this.handleKeyDown);
-  }
+    document.addEventListener('keydown', handleKeyDown);
 
-  componentWillUnmount() {
-    document.removeEventListener('keydown', this.handleKeyDown);
-  }
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [onClose]);
 
-  handleOverlayClick = e => {
+  const handleOverlayClick = e => {
     if (e.target === e.currentTarget) {
-      this.props.onClose();
+      onClose();
     }
   };
 
-  handleKeyDown = e => {
-    if (e.key === 'Escape') {
-      this.props.onClose();
-    }
-  };
-
-  render() {
-    const { isVisible, imageUrl, alt } = this.props;
-    return (
-      <Overlay isVisible={isVisible} onClick={this.handleOverlayClick}>
-        <ModalWin>
-          <img src={imageUrl} alt={alt} />
-        </ModalWin>
-      </Overlay>
-    );
-  }
-}
+  return (
+    <Overlay isVisible={isVisible} onClick={handleOverlayClick}>
+      <ModalWin>
+        <img src={imageUrl} alt={alt} />
+      </ModalWin>
+    </Overlay>
+  );
+};

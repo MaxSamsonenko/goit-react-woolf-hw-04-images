@@ -1,6 +1,4 @@
-import React, { Component } from 'react';
-import isPropValid from '@emotion/is-prop-valid';
-import { StyleSheetManager } from 'styled-components';
+import React, { useState, useEffect, useRef } from 'react';
 
 import { Searchbar } from './Searchbar/Searchbar';
 import { ImageGallery } from './ImageGallery/ImageGallery';
@@ -11,109 +9,89 @@ import { fetchImages } from './api';
 
 import { MainWrapper, Container, LoaderWrap } from './App.styled';
 
-export class App extends Component {
-  state = {
-    pictures: [],
-    query: '',
-    page: 1,
-    status: '',
-    isLoading: false,
-    isModalVisible: false,
-    modalImage: { url: '', alt: '' },
-    hasMorePages: false,
-  };
+export const App = () => {
+  const [pictures, setPictures] = useState([]);
+  const [query, setQuery] = useState('');
+  const [page, setPage] = useState(1);
+  const [status, setStatus] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [hasMorePages, setHasMorePages] = useState(false);
+  const [modalImageUrl, setModalImageUrl] = useState('');
+  const [modalImageAlt, setModalImageAlt] = useState('');
+  const isFirstPageLoad = useRef(true);
 
-  shouldForwardProp(propName, target) {
-    if (typeof target === 'string') {
-      return isPropValid(propName);
-    }
-    return true;
-  }
-
-  async componentDidUpdate(prevProps, prevState) {
-    const { page, query } = this.state;
-
-    if (
-      this.state.page !== prevState.page ||
-      this.state.query !== prevState.query
-    ) {
-      try {
-        let result = await fetchImages(query, page);
-        if (result.hits.length === 0) {
-          this.setState({ status: 'rejected', isLoading: false });
-          throw new Error('something went wrong');
+  useEffect(() => {
+    if (query !== '' && !isFirstPageLoad.current) {
+      async function getPics() {
+        setIsLoading(true);
+        try {
+          const result = await fetchImages(query, page);
+          if (result.hits.length === 0) {
+            setStatus('rejected');
+          } else {
+            setPictures(pictures => [...pictures, ...result.hits]);
+            setStatus('resolved');
+            setHasMorePages(page < Math.ceil(result.totalHits / 12));
+          }
+        } catch (error) {
+          console.log(error);
+          setStatus('rejected');
         }
-        this.setState(prevState => {
-          return {
-            pictures: [...prevState.pictures, ...result.hits],
-            status: 'resolved',
-            hasMorePages: page < Math.ceil(result.totalHits / 12),
-            isLoading: false,
-          };
-        });
-        console.log(this.state.pictures);
-      } catch (error) {
-        console.log(error);
-        this.setState({ status: 'rejected', isLoading: false });
+        setIsLoading(false);
       }
+
+      getPics();
     }
-  }
 
-  onBtnClick = async () => {
-    this.setState(prevState => {
-      return {
-        page: prevState.page + 1,
-        isLoading: true,
-      };
-    });
+    if (isFirstPageLoad.current) {
+      isFirstPageLoad.current = false;
+    }
+  }, [page, query]);
+
+  const onBtnClick = async () => {
+    setPage(page => page + 1);
+    setIsLoading(true);
   };
 
-  addPictures = ({ query }) => {
-    this.setState({
-      query: query,
-      pictures: [],
-      page: 1,
-      status: 'pending',
-      hasMorePages: false,
-    });
+  const addPictures = ({ query }) => {
+    setQuery(query);
+    setPictures([]);
+    setPage(1);
+    setStatus('pending');
+    setHasMorePages(false);
   };
-  onImageClick = (imageUrl, imageAlt) => {
-    this.setState({
-      isModalVisible: true,
-      modalImage: { url: imageUrl, alt: imageAlt },
-    });
+  const onImageClick = (imageUrl, imageAlt) => {
+    setIsModalVisible(true);
+    setModalImageAlt(imageAlt);
+    setModalImageUrl(imageUrl);
   };
-  closeModal = () => {
-    this.setState({ isModalVisible: false });
+  const closeModal = () => {
+    setIsModalVisible(false);
   };
-  render() {
-    const { pictures, status, isLoading, hasMorePages, isModalVisible } =
-      this.state;
-    return (
-      <StyleSheetManager shouldForwardProp={this.shouldForwardProp}>
-        <MainWrapper>
-          <Modal
-            isVisible={isModalVisible}
-            imageUrl={this.state.modalImage.url}
-            alt={this.state.modalImage.alt}
-            onClose={this.closeModal}
-          />
-          <Searchbar onSubmit={this.addPictures} />
-          {status === 'rejected' && <div>Something went wrong</div>}
-          {status === 'pending' && <Loader />}
-          {status === 'resolved' && (
-            <Container>
-              <ImageGallery items={pictures} onClick={this.onImageClick} />
-              {isLoading && (
-                <LoaderWrap>
-                  <Loader />
-                </LoaderWrap>
-              )}
-              {hasMorePages && <Button onLoadMoreBtnClick={this.onBtnClick} />}
-            </Container>
+
+  return (
+    <MainWrapper>
+      <Modal
+        isVisible={isModalVisible}
+        imageUrl={modalImageUrl}
+        alt={modalImageAlt}
+        onClose={closeModal}
+      />
+      <Searchbar onSubmit={addPictures} />
+      {status === 'rejected' && <div>Something went wrong</div>}
+      {status === 'pending' && <Loader />}
+      {status === 'resolved' && (
+        <Container>
+          <ImageGallery items={pictures} onClick={onImageClick} />
+          {isLoading && (
+            <LoaderWrap>
+              <Loader />
+            </LoaderWrap>
           )}
-        </MainWrapper>
-      </StyleSheetManager>
-    );
-  }
-}
+          {hasMorePages && <Button onLoadMoreBtnClick={onBtnClick} />}
+        </Container>
+      )}
+    </MainWrapper>
+  );
+};
