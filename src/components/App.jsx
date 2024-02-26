@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 
 import { Searchbar } from './Searchbar/Searchbar';
 import { ImageGallery } from './ImageGallery/ImageGallery';
@@ -19,10 +19,9 @@ export const App = () => {
   const [hasMorePages, setHasMorePages] = useState(false);
   const [modalImageUrl, setModalImageUrl] = useState('');
   const [modalImageAlt, setModalImageAlt] = useState('');
-  const isFirstPageLoad = useRef(true);
 
   useEffect(() => {
-    if (query !== '' && !isFirstPageLoad.current) {
+    if (query !== '') {
       async function getPics() {
         setIsLoading(true);
         try {
@@ -42,10 +41,6 @@ export const App = () => {
       }
 
       getPics();
-    }
-
-    if (isFirstPageLoad.current) {
-      isFirstPageLoad.current = false;
     }
   }, [page, query]);
 
